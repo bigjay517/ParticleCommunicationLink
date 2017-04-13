@@ -27,7 +27,7 @@ void loop() {
 }
 
 void transmitMessage(const char * buffer, const int length) {
-    char txData[MESSAGE_TX_MAX_LENGTH];
+      char txData[MESSAGE_TX_MAX_LENGTH];
       int txMessageCount = 0;
       int txTransferPending = length;
       int txLengthToSend = 0;
@@ -47,7 +47,7 @@ void transmitMessage(const char * buffer, const int length) {
             }
             txMessageCount++;
             //cout << txData << endl << "LoM: " << txLengthToSend << endl;
-            Particle.publish(MESSAGE_ID, txData);
+            Particle.publish(MESSAGE_ID, txData, 60, PRIVATE);
             messageWaitingTime=millis();
             txTransferPending-=txLengthToSend;
             for(i=0;i<MESSAGE_TX_MAX_LENGTH;i++) {
