@@ -8,21 +8,42 @@
 char messageBuffer[1000];
 int messageWaitingTime;
 int testPublishTime;
+int msgBufIndex;
 
 void setup() {
+   Serial.begin(115200);
+   msgBufIndex = 0;
    testPublishTime = messageWaitingTime = millis();
    for(int i=0;i<1000;i++) {
-      messageBuffer[i] = 'c';
+      messageBuffer[i] = '\0';
    }
 }
 
 void loop() {
+   if (Serial.available()) {
+      int inByte = Serial.read();
+      messageBuffer[msgBufIndex++] = (char)inByte;
+      testPublishTime = millis();
+   }
+   if (msgBufIndex>0) {
+      if(millis()-testPublishTime>=500)
+      {
+         transmitMessage(messageBuffer, msgBufIndex);
+         msgBufIndex=0;
+      }
+   }
+
+
+
+   /* No need for test message to be transmitted */
+   /*
    if(millis()-testPublishTime>=60000)
    {
       //Particle.publish("30 second event");
       transmitMessage(messageBuffer, 1000);
       testPublishTime = millis();
    }
+   */
 
 }
 
