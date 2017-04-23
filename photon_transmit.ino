@@ -39,6 +39,9 @@ void transmitMessage(const char * buffer, const int length) {
    int txTransferPending = length;
    int txLengthToSend = 0;
    int i;
+   for(i=0;i<MESSAGE_TX_MAX_LENGTH;i++) {
+      txData[i] = '\0';
+   }
    sprintf(txData, "%d", length);
    Particle.publish(LENGTH_ID, txData, 60, PRIVATE);
    while(txTransferPending>0) {
