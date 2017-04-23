@@ -14,13 +14,16 @@ int rxRecieved;
 int rxMessageCount;
 int messageWaitingTime;
 int lastRxTime;
+int serialLastRx;
+int msgBufIndex;
 
 void setup() {
    Serial1.begin(115200);
-   lastRxTime = messageWaitingTime = millis();
+   msgBufIndex = 0;
+   lastRxTime = serialLastRx = messageWaitingTime = millis();
    rxExpectedLength = 0;
    for(int i=0;i<1000;i++) {
-      messageBuffer[i] = 'p';
+      messageBuffer[i] = '\0';
    }
    rxRecieved = 0;
    Particle.subscribe("bigjay517/core/length", setRecieveLength, MY_DEVICES);
@@ -42,15 +45,11 @@ void loop() {
       {
          int decodedLen = base64_dec_len(rxMessageBuffer, rxRecieved);
          char decoded[decodedLen];
-         //Serial1.print("LEN: ");
-         //Serial1.println(decodedLen);
 
          base64_decode(decoded, rxMessageBuffer, rxRecieved);
 
          for(int i=0;i<decodedLen;i++)
          {
-            //Serial1.print(i);
-            //Serial1.print(": ");
             Serial1.print(decoded[i]);
          }
 
@@ -59,6 +58,25 @@ void loop() {
       }
    }
 
+   if (Serial1.available()) {
+      char inByte = Serial1.read();
+      /*Serial1.print(inByte);*/
+      messageBuffer[msgBufIndex++] = (char)inByte;
+      serialLastRx = millis();
+   }
+   if (msgBufIndex>0) {
+      if(millis()-serialLastRx>=500)
+      {
+         int encodedLen = base64_enc_len(msgBufIndex);
+         char encoded[encodedLen];
+         base64_encode(encoded, messageBuffer, msgBufIndex); 
+         transmitMessage(encoded, encodedLen);
+         msgBufIndex=0;
+         for(int i=0;i<1000;i++) {
+            messageBuffer[i] = '\0';
+         }
+      }
+   }
 }
 
 void transmitMessage(const char * buffer, const int length) {
@@ -84,7 +102,6 @@ void transmitMessage(const char * buffer, const int length) {
             txData[i]=buffer[txMessageCount*MESSAGE_TX_MAX_LENGTH+i];
          }
          txMessageCount++;
-         //cout << txData << endl << "LoM: " << txLengthToSend << endl;
          Particle.publish(MESSAGE_ID, txData, 60, PRIVATE);
          messageWaitingTime=millis();
          txTransferPending-=txLengthToSend;
@@ -93,37 +110,18 @@ void transmitMessage(const char * buffer, const int length) {
          }
       }
    }
-   //Particle.publish("EOM_FROM_PROTON", length);
 }
 
 void setRecieveLength(const char *event, const char *data) {
-   //char txData[10];
    rxExpectedLength = atoi(data);
-   //sprintf(txData, "%d", rxExpectedLength);
-   //Particle.publish("RX_LENGTH", txData);
 }
 
 void bufferRecieveMessage(const char *event, const char *data) {
    char * s = &rxMessageBuffer[rxRecieved];
    const char * t = data;
-   /*
-      if(rxExpectedLength-rxRecieved>MESSAGE_TX_MAX_LENGTH) {
-      for(i=0;i<MESSAGE_TX_MAX_LENGTH;i++) {
-      rxMessageBuffer[rxRecieved+i] = data[i];
-      }
-      }
-      else if (rxExpectedLength-rxRecieved>0) {
-      for(i=0;i<rxExpectedLength;i++) {
-      rxMessageBuffer[rxRecieved+i] = data[i];
-      }
-      transmitMessage(rxMessageBuffer, rxExpectedLength);
-      }*/
    while (*s++ = *t++)
    {
       rxRecieved++;
    }
    lastRxTime = millis();
-   //transmitMessage(rxMessageBuffer, i);
-   //Serial1.print("RX: ");
-   //Serial1.println(rxMessageBuffer);
 }
