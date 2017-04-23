@@ -67,13 +67,23 @@ void loop() {
    if (msgBufIndex>0) {
       if(millis()-serialLastRx>=500)
       {
-         int encodedLen = base64_enc_len(msgBufIndex);
-         char encoded[encodedLen];
-         base64_encode(encoded, messageBuffer, msgBufIndex); 
-         transmitMessage(encoded, encodedLen);
-         msgBufIndex=0;
-         for(int i=0;i<1000;i++) {
-            messageBuffer[i] = '\0';
+         if(messageBuffer[0] & 0x80)
+         {
+            int encodedLen = base64_enc_len(msgBufIndex);
+            char encoded[encodedLen];
+            base64_encode(encoded, messageBuffer, msgBufIndex); 
+            transmitMessage(encoded, encodedLen);
+            msgBufIndex=0;
+            for(int i=0;i<1000;i++) {
+               messageBuffer[i] = '\0';
+            }
+         }
+         else
+         {
+            msgBufIndex=0;
+            for(int i=0;i<1000;i++) {
+               messageBuffer[i] = '\0';
+            }
          }
       }
    }
