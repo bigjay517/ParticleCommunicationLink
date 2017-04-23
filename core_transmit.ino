@@ -18,7 +18,7 @@ int serialLastRx;
 int msgBufIndex;
 
 void setup() {
-   Serial1.begin(115200);
+   Serial1.begin(19200);
    msgBufIndex = 0;
    lastRxTime = serialLastRx = messageWaitingTime = millis();
    rxExpectedLength = 0;
@@ -58,7 +58,7 @@ void loop() {
       }
    }
 
-   if (Serial1.available()) {
+   while (Serial1.available()) {
       char inByte = Serial1.read();
       /*Serial1.print(inByte);*/
       messageBuffer[msgBufIndex++] = (char)inByte;
