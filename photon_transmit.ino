@@ -1,3 +1,5 @@
+#include <Base64.h>
+
 #define MESSAGE_TX_WAIT_MS  1000
 #define MESSAGE_TX_MAX_LENGTH 255
 
@@ -11,24 +13,50 @@ int rxExpectedLength;
 int rxRecieved;
 int rxMessageCount;
 int messageWaitingTime;
-int testPublishTime;
+int lastRxTime;
 
 void setup() {
-   testPublishTime = messageWaitingTime = millis();
+   Serial1.begin(115200);
+   lastRxTime = messageWaitingTime = millis();
    rxExpectedLength = 0;
    for(int i=0;i<1000;i++) {
       messageBuffer[i] = 'p';
    }
+   rxRecieved = 0;
    Particle.subscribe("bigjay517/core/length", setRecieveLength, MY_DEVICES);
    Particle.subscribe("bigjay517/core/message", bufferRecieveMessage, MY_DEVICES);
 }
 
 void loop() {
-   if(millis()-testPublishTime>=60000)
+   if(rxRecieved>0)
    {
-      //Particle.publish("30 second event");
-      //transmitMessage(messageBuffer, 1000);
-      testPublishTime = millis();
+      if(rxRecieved != rxExpectedLength)
+      {
+         if(millis()-lastRxTime>=5000)
+         {
+            //RX TIMEOUT!!
+            rxRecieved = 0;
+         }
+      }
+      else
+      {
+         int decodedLen = base64_dec_len(rxMessageBuffer, rxRecieved);
+         char decoded[decodedLen];
+         //Serial1.print("LEN: ");
+         //Serial1.println(decodedLen);
+
+         base64_decode(decoded, rxMessageBuffer, rxRecieved);
+
+         for(int i=0;i<decodedLen;i++)
+         {
+            //Serial1.print(i);
+            //Serial1.print(": ");
+            Serial1.print(decoded[i]);
+         }
+
+         lastRxTime = millis();
+         rxRecieved = 0;
+      }
    }
 
 }
@@ -69,28 +97,33 @@ void transmitMessage(const char * buffer, const int length) {
 }
 
 void setRecieveLength(const char *event, const char *data) {
-   //char txData[MESSAGE_TX_MAX_LENGTH];
-   if(rxExpectedLength==0) {
-      rxExpectedLength = atoi(data);
-      rxMessageCount = 0;
-      rxRecieved = 0;
-   }
+   //char txData[10];
+   rxExpectedLength = atoi(data);
    //sprintf(txData, "%d", rxExpectedLength);
    //Particle.publish("RX_LENGTH", txData);
 }
 
 void bufferRecieveMessage(const char *event, const char *data) {
-   int i=0;
-   if(rxExpectedLength-rxRecieved>MESSAGE_TX_MAX_LENGTH) {
+   char * s = &rxMessageBuffer[rxRecieved];
+   const char * t = data;
+   /*
+      if(rxExpectedLength-rxRecieved>MESSAGE_TX_MAX_LENGTH) {
       for(i=0;i<MESSAGE_TX_MAX_LENGTH;i++) {
-         rxMessageBuffer[rxRecieved+i] = data[i];
+      rxMessageBuffer[rxRecieved+i] = data[i];
       }
-   }
-   else if (rxExpectedLength-rxRecieved>0) {
+      }
+      else if (rxExpectedLength-rxRecieved>0) {
       for(i=0;i<rxExpectedLength;i++) {
-         rxMessageBuffer[rxRecieved+i] = data[i];
+      rxMessageBuffer[rxRecieved+i] = data[i];
       }
       transmitMessage(rxMessageBuffer, rxExpectedLength);
+      }*/
+   while (*s++ = *t++)
+   {
+      rxRecieved++;
    }
-   rxRecieved += i;
+   lastRxTime = millis();
+   //transmitMessage(rxMessageBuffer, i);
+   //Serial1.print("RX: ");
+   //Serial1.println(rxMessageBuffer);
 }
